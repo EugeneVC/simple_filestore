@@ -27,11 +27,26 @@ func TestFileStore(t *T) {
 	//file body
 	str := "This is simple text file body"
 
+	//POST FILE
 	v := url.Values{}
 	v.Add("body",str)
 
-	resp, _ := http.Post("http://" + config.BindUrl + "/put","application/x-www-form-urlencoded", strings.NewReader(v.Encode()))
+	resp, err := http.Post("http://" + config.BindUrl + "/put","application/x-www-form-urlencoded", strings.NewReader(v.Encode()))
+	if err != nil {
+		t.Error("Web server fail",err.Error())
+		return
+	}
 
 	bodyText, err := ioutil.ReadAll(resp.Body)
-	fmt.Print(string(bodyText))
+	fmt.Println(string(bodyText))
+
+	//GET FILE
+	resp, err = http.Get("http://" + config.BindUrl + "/get")
+	if err != nil {
+		t.Error("Web server fail",err.Error())
+		return
+	}
+
+	bodyText, err = ioutil.ReadAll(resp.Body)
+	fmt.Println(string(bodyText))
 }
