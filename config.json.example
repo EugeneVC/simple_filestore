@@ -1,0 +1,3 @@
+{
+    "BindUrl" : "localhost:9090", "FilePathWithData" : "/tmp/filestore"
+}
