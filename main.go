@@ -17,6 +17,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const MAX_UPLOAD_FILE_SIZE = 4*1024*1024*1024 // 4Gb
+
 type Config struct {
 	BindUrl          string
 	FilePathWithData string
@@ -50,8 +52,17 @@ func postFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	maxlength := int64(MAX_UPLOAD_FILE_SIZE)
+
 	//parse agruments
-	r.ParseForm()       // parse arguments, you have to call this by yourself
+	//fmt.Println("Content-type",r.Header.Get("Content-type"))
+	r.Body = http.MaxBytesReader(w, r.Body, maxlength)
+	err:= r.ParseForm()       // parse arguments, you have to call this by yourself
+	if err != nil{
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, err.Error())
+		return
+	}
 	//fmt.Println(r.Form) // print form information in server side
 
 	value, exists := r.Form["body"]
@@ -68,10 +79,10 @@ func postFile(w http.ResponseWriter, r *http.Request) {
 
 	//save file on disk - make path 5 level
 	pathFile := makeFilePath(config.FilePathWithData, bodyMd5)
-	err := os.MkdirAll(pathFile, 0777)
+	err = os.MkdirAll(pathFile, 0777)
 	if err != nil {
 		w.WriteHeader(http.StatusExpectationFailed)
-		fmt.Fprintln(w, "Can`t create file path")
+		fmt.Fprintln(w, "Can`t create file path: "+ pathFile)
 		return
 	}
 	pathFile = path.Join(pathFile, bodyMd5)
@@ -79,12 +90,19 @@ func postFile(w http.ResponseWriter, r *http.Request) {
 	fl, err := os.Create(pathFile)
 	if err != nil {
 		w.WriteHeader(http.StatusExpectationFailed)
-		fmt.Fprintln(w, "Can`t write file")
+		fmt.Fprintln(w, "Can`t create file")
 		return
 	}
 	defer fl.Close()
 
-	fl.Write([]byte(body))
+	_,err = fl.Write([]byte(body))
+	if err != nil{
+		w.WriteHeader(http.StatusExpectationFailed)
+		fmt.Fprintln(w, "Can`t write file")
+		return
+	}
+
+	//fmt.Println("Content-Length",r.Header.Get("Content-Length"),bodyMd5,pathFile)
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(bodyMd5))
