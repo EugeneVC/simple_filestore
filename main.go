@@ -22,6 +22,7 @@ const MAX_UPLOAD_FILE_SIZE = 4*1024*1024*1024 // 4Gb
 type Config struct {
 	BindUrl          string
 	FilePathWithData string
+	PathLevel        int  // глубина папок - 3-5
 }
 
 var config Config
@@ -41,7 +42,17 @@ func MD5(text string) string {
 	return hex.EncodeToString(algorithm.Sum(nil))
 }
 
-func makeFilePath(rootPath string, filename string) string {
+func makeFilePath(rootPath string, filename string, pathLevel int) string {
+
+	switch pathLevel {
+		case 2:
+			return path.Join(rootPath, filename[0:1], filename[1:2])
+		case 3:
+			return path.Join(rootPath, filename[0:1], filename[1:2], filename[2:3])
+		case 4:
+			return path.Join(rootPath, filename[0:1], filename[1:2], filename[2:3],filename[3:4])
+	}
+
 	return path.Join(rootPath, filename[0:1], filename[1:2], filename[2:3], filename[3:4], filename[4:5])
 }
 
@@ -78,7 +89,7 @@ func postFile(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Body", body, bodyMd5)
 
 	//save file on disk - make path 5 level
-	pathFile := makeFilePath(config.FilePathWithData, bodyMd5)
+	pathFile := makeFilePath(config.FilePathWithData, bodyMd5,config.PathLevel)
 	err = os.MkdirAll(pathFile, 0777)
 	if err != nil {
 		w.WriteHeader(http.StatusExpectationFailed)
@@ -123,7 +134,7 @@ func getFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//read file
-	pathFile := makeFilePath(config.FilePathWithData, filename)
+	pathFile := makeFilePath(config.FilePathWithData, filename,config.PathLevel)
 	pathFile = path.Join(pathFile, filename)
 
 	body,err := ioutil.ReadFile(pathFile)
@@ -151,7 +162,7 @@ func deleteFile(w http.ResponseWriter, r *http.Request){
 	}
 
 	//make path
-	pathFile := makeFilePath(config.FilePathWithData, filename)
+	pathFile := makeFilePath(config.FilePathWithData, filename,config.PathLevel)
 	pathFile = path.Join(pathFile, filename)
 
 	//check file exits
